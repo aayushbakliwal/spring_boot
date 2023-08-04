@@ -12,10 +12,7 @@ phases:
 
   post_build:
     commands:
-      - echo start post build.
-      - mkdir artifacts
-      - cp target/spring_boot-0.0.1-SNAPSHOT.war artifacts
-      - echo finish post build.
+      - echo nothing in post build.
 
 artifacts:
-  files: spring_boot-0.0.1-SNAPSHOT.war
+  files: target/spring_boot-0.0.1-SNAPSHOT.war
