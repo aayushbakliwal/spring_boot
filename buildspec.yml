@@ -14,8 +14,8 @@ phases:
     commands:
       - echo start post build.
       - mkdir artifacts
-      - cp target/accessingdatamysql-0.0.1-SNAPSHOT.war artifacts
+      - cp target/spring_boot-0.0.1-SNAPSHOT.war artifacts
       - echo finish post build.
 
 artifacts:
-  files: accessingdatamysql-0.0.1-SNAPSHOT.war
+  files: spring_boot-0.0.1-SNAPSHOT.war
