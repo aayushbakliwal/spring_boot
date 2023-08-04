@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+
+  build:
+    commands:
+      - java -version
+      - ./mvnw clean package
+
+  post_build:
+    commands:
+      - echo start post build.
+      - mkdir artifacts
+      - cp target/accessingdatamysql-0.0.1-SNAPSHOT.war artifacts
+      - echo finish post build.
+
+artifacts:
+  files: accessingdatamysql-0.0.1-SNAPSHOT.war
