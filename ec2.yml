@@ -270,7 +270,6 @@ Resources:
 
 Outputs:
   Ec2InstanceId:
-    Description" : "Instance Id"
     Value: !Ref ServerInstance
     Export:
       Name: !Sub "${AWS::StackName}-InstanceId"
