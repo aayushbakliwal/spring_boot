@@ -5,32 +5,22 @@ phases:
     runtime-versions:  # Define runtime versions for tools used in the build.
       java: corretto17  # Use Amazon Corretto 17 as the Java runtime version.
 
-  build:  # Phase for building the application.
+  build:  #Phase for building the application.
     commands:
-      # - java -version  # Print the Java version installed for debugging purposes.
-      # - ./mvnw clean package  # Execute Maven to clean the project and package the application.
+      - java -version  # Print the Java version installed for debugging purposes.
+      - ./mvnw clean package
+      # Execute Maven to clean the project and package the application.
       # Replace with your desired AWS_REGION, AMI_ID, KEY_PAIR_NAME, SECURITY_GROUP_ID, and SCRIPT_TO_RUN
+      - aws s3api create-bucket --bucket springboot-app-bucket-hello
+      - aws s3api put-object --bucket springboot-app-bucket-hello --key target/spring_boot-0.0.1-SNAPSHOT.war --body /spring_boot-0.0.1-SNAPSHOT.war
       - AWS_REGION="ap-northeast-1"
       - AMI_ID="ami-08c84d37db8aafe00"
       - KEY_PAIR_NAME="HL00886"
       - aws cloudformation deploy --template-file ec2.yml --stack-name ec2 --capabilities CAPABILITY_NAMED_IAM --region $AWS_REGION
-      
-      # Run the script
-      # - |
-      #   INSTANCE_ID=$(aws ec2 run-instances \
-      #     --region $AWS_REGION \
-      #     --image-id $AMI_ID \
-      #     --instance-type t2.micro \
-      #     --key-name $KEY_PAIR_NAME \
-      #     --query 'Instances[0].InstanceId' \
-      #     --output text
-      #   )
-
-      #   echo "EC2 instance with ID $INSTANCE_ID created successfully."
-
-      #   echo "Waiting for the instance to be in 'running' state..."
-      #   aws ec2 wait instance-running --region $AWS_REGION --instance-ids $INSTANCE_ID
-      #   IMAGE_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "prj-image" --no-reboot --output text)
+      - aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs' --output text)
+      - aws ec2 wait instance-running --region $AWS_REGION --instance-ids $INSTANCE_ID
+      - IMAGE_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "prj-image" --no-reboot --output text)
+      - aws cloudformation delete-stack --stack-name ec2
       #   aws ec2 describe-images --image-ids $IMAGE_ID --region $AWS_REGION
 
   post_build:  # Phase for post-build actions (optional).
