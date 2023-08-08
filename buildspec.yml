@@ -25,16 +25,13 @@ phases:
           --query 'Instances[0].InstanceId' \
           --output text
         )
-        if [ -z "$INSTANCE_ID" ]; then
-          echo "Failed to create EC2 instance. Exiting..."
-          exit 1
-        fi
 
         echo "EC2 instance with ID $INSTANCE_ID created successfully."
 
         echo "Waiting for the instance to be in 'running' state..."
         aws ec2 wait instance-running --region $AWS_REGION --instance-ids $INSTANCE_ID
-        aws ec2 create-image --instance-id $INSTANCE_ID --name "prj-image" --no-reboot
+        IMAGE_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "prj-image" --no-reboot)
+        echo $IMAGE_ID
 
   post_build:  # Phase for post-build actions (optional).
     commands:
