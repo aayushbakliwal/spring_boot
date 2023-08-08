@@ -48,7 +48,7 @@ Parameters:
   ObjectName:
     Description: war file name
     Type: String
-    Default: demo-0.0.1-SNAPSHOT.war
+    Default: spring_boot-0.0.1-SNAPSHOT.war
 
 Resources:
 ###############################
