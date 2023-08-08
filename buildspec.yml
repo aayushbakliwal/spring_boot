@@ -1,18 +1,19 @@
-version: 0.2
+version: 0.2  # Buildspec version used for defining the build pipeline.
 
 phases:
-  install:
-    runtime-versions:
-      java: corretto17
+  install:  # Phase for installing dependencies and setting up the environment.
+    runtime-versions:  # Define runtime versions for tools used in the build.
+      java: corretto17  # Use Amazon Corretto 17 as the Java runtime version.
 
-  build:
+  build:  # Phase for building the application.
     commands:
-      - java -version
-      - ./mvnw clean package
+      - java -version  # Print the Java version installed for debugging purposes.
+      - ./mvnw clean package  # Execute Maven to clean the project and package the application.
 
-  post_build:
+  post_build:  # Phase for post-build actions (optional).
     commands:
-      - echo nothing in post build.
+      - echo nothing in post build.  # Placeholder command, you can add post-build actions here.
 
-artifacts:
-  files: target/spring_boot-0.0.1-SNAPSHOT.war
+artifacts:  # Configuration for the build output artifacts.
+  files: target/spring_boot-0.0.1-SNAPSHOT.war  # The files to be included in the build artifact. In this case, it's the Spring Boot executable WAR file.
+
