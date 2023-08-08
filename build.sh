@@ -10,15 +10,22 @@ echo "Building the application..."
 ./mvnw clean package
 
 # Create an S3 bucket if it doesn't exist
+# Create an S3 bucket if it doesn't exist
 BUCKET_NAME="springboot-app-bucket-hello"
 if ! aws s3 ls "s3://$BUCKET_NAME" --region "$AWS_REGION" 2>&1 | grep -q 'NoSuchBucket'; then
     if ! aws s3api create-bucket --bucket "$BUCKET_NAME" --create-bucket-configuration LocationConstraint="$AWS_REGION" --region "$AWS_REGION"; then
-        echo "Failed to create the S3 bucket."
-        exit 1
+        # Ignore the error if the bucket already exists and continue
+        if [[ "$?" != "255" || "$(aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" 2>&1 | grep -o 'BucketAlreadyOwnedByYou')" == "BucketAlreadyOwnedByYou" ]]; then
+            echo "Bucket already exists and owned by you. Proceeding with the build."
+        else
+            echo "Failed to create the S3 bucket."
+            exit 1
+        fi
     fi
 else
     echo "Bucket already exists."
 fi
+
 
 # Upload the built Spring Boot executable WAR file to the S3 bucket
 if ! aws s3api put-object --bucket "$BUCKET_NAME" --key "spring_boot-0.0.1-SNAPSHOT.war" --body "target/spring_boot-0.0.1-SNAPSHOT.war" --region "$AWS_REGION"; then
