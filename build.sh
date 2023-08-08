@@ -48,11 +48,9 @@ if ! aws cloudformation deploy \
 fi
 
 # Wait for the EC2 instance to be in the "running" state
+
 INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs[?OutputKey==`InstanceId`].OutputValue' --output text --region "$AWS_REGION")
-if ! aws ec2 wait instance-running --region "$AWS_REGION" --instance-ids "$INSTANCE_ID"; then
-    echo "Instance did not reach the running state."
-    exit 1
-fi
+aws ec2 wait instance-running --region "$AWS_REGION" --instance-ids "$INSTANCE_ID";
 
 # Create a custom Amazon Machine Image (AMI) from the running EC2 instance
 IMAGE_ID=$(aws ec2 create-image --instance-id "$INSTANCE_ID" --name "prj-image" --no-reboot --output text --region "$AWS_REGION")
