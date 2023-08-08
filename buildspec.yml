@@ -10,14 +10,14 @@ phases:
       - AWS_REGION="ap-northeast-1"
       - AMI_ID="ami-08c84d37db8aafe00"
       - KEY_PAIR_NAME="HL00886"
-      - java -version  # Print the Java version installed for debugging purposes.
-      - ./mvnw clean package
-      # Execute Maven to clean the project and package the application.
-      # Replace with your desired AWS_REGION, AMI_ID, KEY_PAIR_NAME, SECURITY_GROUP_ID, and SCRIPT_TO_RUN
-      - aws s3api create-bucket --bucket springboot-app-bucket-hello --create-bucket-configuration LocationConstraint=$AWS_REGION
-      - aws s3api put-object --bucket springboot-app-bucket-hello --key spring_boot-0.0.1-SNAPSHOT.war --body target/spring_boot-0.0.1-SNAPSHOT.war
-      - aws cloudformation deploy --template-file ec2.yml --stack-name ec2 --capabilities CAPABILITY_NAMED_IAM --region ap-northeast-1
-      - aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs' --output text)
+      # - java -version  # Print the Java version installed for debugging purposes.
+      # - ./mvnw clean package
+      # # Execute Maven to clean the project and package the application.
+      # # Replace with your desired AWS_REGION, AMI_ID, KEY_PAIR_NAME, SECURITY_GROUP_ID, and SCRIPT_TO_RUN
+      # - aws s3api create-bucket --bucket springboot-app-bucket-hello --create-bucket-configuration LocationConstraint=$AWS_REGION
+      # - aws s3api put-object --bucket springboot-app-bucket-hello --key spring_boot-0.0.1-SNAPSHOT.war --body target/spring_boot-0.0.1-SNAPSHOT.war
+      # - aws cloudformation deploy --template-file ec2.yml --stack-name ec2 --capabilities CAPABILITY_NAMED_IAM --region ap-northeast-1
+      - INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs[*].OutputValue' --output text --region ap-northeast-1)
       - aws ec2 wait instance-running --region $AWS_REGION --instance-ids $INSTANCE_ID
       - IMAGE_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "prj-image" --no-reboot --output text)
       - aws cloudformation delete-stack --stack-name ec2
