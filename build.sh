@@ -52,8 +52,10 @@ fi
 INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs[*].OutputValue' --output text --region "$AWS_REGION")
 aws ec2 wait instance-running --region "$AWS_REGION" --instance-ids "$INSTANCE_ID";
 
-# Create a custom Amazon Machine Image (AMI) from the running EC2 instance
-IMAGE_ID=$(aws ec2 create-image --instance-id "$INSTANCE_ID" --name "prj-image" --no-reboot --output text --region "$AWS_REGION")
+# Create a custom Amazon Machine Image (AMI) from the running EC2 instance with a timestamp appended to the AMI name
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+AMI_NAME="prj-image-$TIMESTAMP"
+IMAGE_ID=$(aws ec2 create-image --instance-id "$INSTANCE_ID" --name "$AMI_NAME" --no-reboot --output text --region "$AWS_REGION")
 if [ -z "$IMAGE_ID" ]; then
     echo "Failed to create the custom Amazon Machine Image (AMI)."
     exit 1
