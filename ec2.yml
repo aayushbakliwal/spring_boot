@@ -268,7 +268,7 @@ Resources:
         - !Ref Ec2Role
       InstanceProfileName: !Sub ${SystemName}-role-profile
 
-outputs:
+Outputs:
   Ec2InstanceId:
     Description" : "Instance Id"
     Value: !Ref ServerInstance
