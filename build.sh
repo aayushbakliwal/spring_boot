@@ -49,7 +49,7 @@ fi
 
 # Wait for the EC2 instance to be in the "running" state
 
-INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs[?OutputKey==`InstanceId`].OutputValue' --output text --region "$AWS_REGION")
+INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name ec2 --query 'Stacks[0].Outputs[*].OutputValue' --output text --region "$AWS_REGION")
 aws ec2 wait instance-running --region "$AWS_REGION" --instance-ids "$INSTANCE_ID";
 
 # Create a custom Amazon Machine Image (AMI) from the running EC2 instance
