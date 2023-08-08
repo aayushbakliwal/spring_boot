@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: this template will create ec2 template
+
+Parameters:
+  # Parameter for the name of the key pair to be used.
+  Keypair:
+    Description: please enter the name of keypair available in ap-northeast-1a
+    Type: String
+    Default: HL00886
+
+  # Parameter for the prefix of all the resources created in this template.
+  SystemName:
+    Description: this name will be the prefix of all the resources.
+    Type: String
+    Default: Web
+
+  # Parameter for the CIDR block of the VPC.
+  VpcCidr:
+    Description: CIDR Block for the VPC. The CIDR should be unique in your environment.
+    Type: String
+    Default: 10.0.0.0/18
+
+  # Parameter for the EC2 instance type.
+  InstanceType:
+    Description: please select based on performance and network requirement.
+    Type: String
+    Default: t3.micro
+
+  # Parameter for the ID of the Amazon Machine Image (AMI) to be used.
+  AmiId:
+    Description: make sure your AMI is of the correct region.
+    Type: AWS::EC2::Image::Id
+    Default: ami-0947c48ae0aaf6781
+
+  # Parameter for the CIDR block of the public subnet.
+  SubnetCidr:
+    Description: this is the CIDR of the public Subnet which should lie between VPC CIDR and should have enough capacity with 5 IPs for AWS.
+    Type: String
+    Default: 10.0.0.1/24
+
+  # Parameter for the S3 bucket name where the war file is located.
+  S3BucketName:
+    Description: Bucket where the war file is located.
+    Type: String
+    Default: springboot-app-bucket-hello
+
+  # Parameter for the war file name.
+  ObjectName:
+    Description: war file name
+    Type: String
+    Default: accessingdatamysql-0.0.1-SNAPSHOT.war
+
+Resources:
+###############################
+# Networking
+###############################
+  # Create the VPC resource.
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-vpc
+
+  # Create the Internet Gateway resource.
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-IGW
+
+  # Attach the Internet Gateway to the VPC.
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref IGW
+
+  # Create the public subnet resource.
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref VPC
+      CidrBlock: !Ref SubnetCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-publicsubnet
+
+  # Create the public route table resource.
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-RouteTable
+
+  # Create the public route resource.
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+
+  # Associate the public route table with the public subnet.
+  PublicRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Create an Elastic IP resource for the EC2 instance.
+  EIP1:
+    Type: AWS::EC2::EIP
+
+  # Associate the Elastic IP with the EC2 instance.
+  EniAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt EIP1.AllocationId
+      InstanceId: !Ref ServerInstance
+
+###############################
+# Server
+###############################
+
+  # Create the EC2 instance resource.
+  ServerInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      Comment: Install a simple web app
+      # CloudFormation Init to set up the instance with necessary configurations.
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - myConfig
+        myConfig:
+          packages:
+            yum:
+              java-17-amazon-corretto.x86_64: []
+              java-17-amazon-corretto-devel.x86_64: []
+          # Files to be copied to the instance.
+          files:
+            /tmp/install.sh:
+              content: !Sub |
+                #!/bin/bash -xe
+                sudo yum update -y
+                sudo wget -P /tmp/ https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.11/bin/apache-tomcat-10.1.11.tar.gz
+                sudo tar -zxvf /tmp/apache-tomcat-10.1.11.tar.gz
+                sudo mv apache-tomcat-10.1.11 tomcat
+                sudo mv tomcat /usr/share/tomcat
+                sudo aws s3 cp s3://${S3BucketName}/${ObjectName} /usr/share/tomcat/webapps/${ObjectName}
+                sudo chmod 755 /usr/share/tomcat/webapps
+                sudo systemctl daemon-reload
+                sudo systemctl start tomcat.service
+              mode: "000755"
+              owner: root
+              group: root
+
+            /etc/systemd/system/tomcat.service:
+              content: |
+                [Unit]
+                Description=ApacheTomcat
+                After=syslog.target network.target
+
+                [Service]
+                Type=forking
+                Environment=JAVA_HOME=/usr
+                Environment=CATALINA_PID=/usr/share/tomcat/temp/tomcat.pid
+                Environment=CATALINA_HOME=/usr/share/tomcat
+                Environment=CATALINA_BASE=/usr/share/tomcat
+
+                ExecStart=/bin/bash /usr/share/tomcat/bin/startup.sh
+                ExecStop=/bin/bash /usr/share/tomcat/bin/shutdown.sh
+                [Install]
+                WantedBy=multi-user.target
+              mode: "000755"
+              owner: root
+              group: root
+          # Commands to be executed on the instance.
+          commands:
+            01_run_script:
+              command: "/tmp/install.sh"
+          # Services to be managed by systemd.
+          services:
+            sysvinit:
+              tomcat:
+                enabled: 'true'
+                ensureRunning: 'true'
+                files:
+                  - /etc/systemd/system/tomcat.service
+
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref Keypair
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+           - !Ref SecGroup
+      IamInstanceProfile: !Ref Ec2RoleInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          /opt/aws/bin/cfn-init -v \
+          --stack ${AWS::StackName} \
+          --resource ServerInstance \
+          --region ${AWS::Region}
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}
+
+  # Create the security group for the EC2 instance.
+  SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: serverinstance-sg
+      GroupDescription: this is the security group for the web server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        -
+          IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-sg
+
+###############################
+# IAM
+###############################
+  # Create the IAM role for the EC2 instance.
+  Ec2Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      RoleName: !Sub ${SystemName}-web-role
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+
+  # Create the IAM instance profile for the EC2 instance.
+  Ec2RoleInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref Ec2Role
+      InstanceProfileName: !Sub ${SystemName}-role-profile
