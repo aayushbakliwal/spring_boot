@@ -7,9 +7,24 @@ phases:
 
   build:  # Phase for building the application.
     commands:
-      - java -version  # Print the Java version installed for debugging purposes.
-      - ./mvnw clean package  # Execute Maven to clean the project and package the application.
-
+      # - java -version  # Print the Java version installed for debugging purposes.
+      # - ./mvnw clean package  # Execute Maven to clean the project and package the application.
+      # Replace with your desired AWS_REGION, AMI_ID, KEY_PAIR_NAME, SECURITY_GROUP_ID, and SCRIPT_TO_RUN
+      - AWS_REGION="ap-northeast-1"
+      - AMI_ID=$(aws ec2 describe-images --region $AWS_REGION --filters "Name=name,Values=amzn2-ami-hvm-x86_64-gp2 " --query "Images[0].ImageId" --output text)
+      - KEY_PAIR_NAME="HL00886"
+      - SCRIPT_TO_RUN="path/to/your/script.sh"
+      
+      # Run the script
+      - |
+        INSTANCE_ID=$(aws ec2 run-instances \
+          --region $AWS_REGION \
+          --image-id $AMI_ID \
+          --instance-type t2.micro \
+          --key-name $KEY_PAIR_NAME \
+          --query 'Instances[0].InstanceId' \
+          --output text
+        )
   post_build:  # Phase for post-build actions (optional).
     commands:
       - echo nothing in post build.  # Placeholder command, you can add post-build actions here.
